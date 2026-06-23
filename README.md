@@ -101,4 +101,4 @@ curl -X POST localhost:8000/v1/matriculas/1/activar
 
 
 --
-*Desarrollado y mantenido por eNanak (lproanoc869@gmail.com).*
+*Desarrollado y mantenido por Daniel Proaño, Elvis Garcia, Andre Michenlena, Andres Castro

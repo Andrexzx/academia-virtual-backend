@@ -21,6 +21,16 @@ NOTA_MINIMA_APROBACION = 7.0
 
 
 def calcular_promedio(parcial1: float, parcial2: float, examen_final: float) -> float:
+    """
+    Calcula el promedio ponderado (parcial1 30%, parcial2 30%, examen_final 40%).
+
+    >>> calcular_promedio(10.0, 10.0, 10.0)
+    10.0
+    >>> calcular_promedio(7.0, 8.0, 6.0)
+    6.9
+    >>> calcular_promedio(5.0, 6.0, 8.0)
+    6.5
+    """
     return round(
         parcial1 * PESO_PARCIAL1 + parcial2 * PESO_PARCIAL2 + examen_final * PESO_EXAMEN_FINAL,
         2,

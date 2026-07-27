@@ -1,0 +1,145 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Gestión de Comprobantes de Pago</h1>
+    <p class="page-subtitle">Facturación de matrículas y desglose de IVA y totales</p>
+  </div>
+</div>
+
+<div *ngIf="errorMessage" class="alert-toast alert-toast-error">
+  <span>{{ errorMessage }}</span>
+</div>
+
+<div class="stats-grid">
+  <div class="glass-card stat-card">
+    <div class="stat-icon">💰</div>
+    <div class="stat-info">
+      <span class="stat-label">Total Recaudado</span>
+      <span class="stat-val">${{ totalFacturado | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon">🏛️</div>
+    <div class="stat-info">
+      <span class="stat-label">Total IVA (15%)</span>
+      <span class="stat-val">${{ totalIva | number:'1.2-2' }}</span>
+    </div>
+  </div>
+
+  <div class="glass-card stat-card">
+    <div class="stat-icon">📄</div>
+    <div class="stat-info">
+      <span class="stat-label">Comprobantes Emitidos</span>
+      <span class="stat-val">{{ comprobantes.length }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="glass-card main-card">
+  <div class="toolbar">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="text"
+        placeholder="Buscar por ID comprobante, matrícula, fecha..."
+        [(ngModel)]="searchTerm"
+        (input)="applyFilter()"
+        class="form-control search-input"
+      />
+    </div>
+    <div class="total-badge">
+      Total: {{ filteredComprobantes.length }} registro(s)
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando información del servidor...</p>
+  </div>
+
+  <div *ngIf="!loading && filteredComprobantes.length === 0" class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="16" y1="13" x2="8" y2="13"></line>
+      <line x1="16" y1="17" x2="8" y2="17"></line>
+    </svg>
+    <p>No se encontraron comprobantes emitidos.</p>
+  </div>
+
+  <div *ngIf="!loading && filteredComprobantes.length > 0" class="table-container">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>ID Comprobante</th>
+          <th>Fecha</th>
+          <th>Matrícula Asociada</th>
+          <th>Subtotal</th>
+          <th>IVA</th>
+          <th>Total</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let comp of filteredComprobantes">
+          <td><span class="badge badge-info">#{{ comp.id_comprobante }}</span></td>
+          <td>{{ comp.fecha }}</td>
+          <td><strong>Matrícula #{{ comp.id_matricula }}</strong></td>
+          <td>${{ comp.subtotal | number:'1.2-2' }}</td>
+          <td>${{ comp.iva | number:'1.2-2' }}</td>
+          <td><span class="badge badge-success">${{ comp.total | number:'1.2-2' }}</span></td>
+          <td style="text-align: right;">
+            <button class="btn btn-secondary btn-icon" (click)="verComprobante(comp)" title="Ver Factura">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()">
+  <div class="modal-card factura-modal" (click)="$event.stopPropagation()">
+    <div class="factura-header">
+      <div class="factura-title">COMPROBANTE DE PAGO</div>
+      <div class="factura-id">#{{ comprobanteSeleccionado?.id_comprobante }}</div>
+    </div>
+
+    <div class="factura-body" *ngIf="comprobanteSeleccionado">
+      <div class="factura-field">
+        <span class="field-label">Fecha:</span>
+        <span class="field-val">{{ comprobanteSeleccionado.fecha }}</span>
+      </div>
+      <div class="factura-field">
+        <span class="field-label">Matrícula:</span>
+        <span class="field-val">#{{ comprobanteSeleccionado.id_matricula }}</span>
+      </div>
+
+      <div class="factura-divider"></div>
+
+      <div class="factura-field">
+        <span class="field-label">Subtotal:</span>
+        <span class="field-val">${{ comprobanteSeleccionado.subtotal | number:'1.2-2' }}</span>
+      </div>
+      <div class="factura-field">
+        <span class="field-label">IVA:</span>
+        <span class="field-val">${{ comprobanteSeleccionado.iva | number:'1.2-2' }}</span>
+      </div>
+      <div class="factura-field total-field">
+        <span class="field-label">Total:</span>
+        <span class="field-val">${{ comprobanteSeleccionado.total | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top: 1.5rem;">
+      <button class="btn btn-primary" (click)="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>

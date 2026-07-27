@@ -1,0 +1,75 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.modal-message {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.modal-actions button {
+  flex: 1;
+  justify-content: center;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

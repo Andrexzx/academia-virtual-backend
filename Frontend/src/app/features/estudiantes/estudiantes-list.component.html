@@ -1,0 +1,159 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Gestión de Estudiantes</h1>
+    <p class="page-subtitle">Listado y administración de alumnos matriculados en la plataforma</p>
+  </div>
+  <button class="btn btn-primary" (click)="openCreateModal()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    <span>Nuevo Estudiante</span>
+  </button>
+</div>
+
+<div *ngIf="successMessage" class="alert-toast alert-toast-success">
+  <span>{{ successMessage }}</span>
+</div>
+
+<div *ngIf="errorMessage" class="alert-toast alert-toast-error">
+  <span>{{ errorMessage }}</span>
+</div>
+
+<div class="glass-card main-card">
+  <div class="toolbar">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="text"
+        placeholder="Buscar por cédula, nombre o dirección..."
+        [(ngModel)]="searchTerm"
+        (input)="applyFilter()"
+        class="form-control search-input"
+      />
+    </div>
+    <div class="total-badge">
+      Total: {{ filteredEstudiantes.length }} estudiante(s)
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando información del servidor...</p>
+  </div>
+
+  <div *ngIf="!loading && filteredEstudiantes.length === 0" class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <line x1="18" y1="8" x2="23" y2="13"></line>
+      <line x1="23" y1="8" x2="18" y2="13"></line>
+    </svg>
+    <p>No se encontraron estudiantes registrados.</p>
+  </div>
+
+  <div *ngIf="!loading && filteredEstudiantes.length > 0" class="table-container">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Cédula</th>
+          <th>Nombre Completo</th>
+          <th>Dirección</th>
+          <th>Teléfono</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let est of filteredEstudiantes">
+          <td><span class="badge badge-info">#{{ est.id_estudiante }}</span></td>
+          <td><strong>{{ est.cedula }}</strong></td>
+          <td>{{ est.nombre }}</td>
+          <td>{{ est.direccion }}</td>
+          <td>{{ est.telefono }}</td>
+          <td style="text-align: right;">
+            <div class="action-buttons">
+              <button class="btn btn-secondary btn-icon" (click)="openEditModal(est)" title="Editar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="btn btn-danger btn-icon" (click)="confirmarEliminar(est)" title="Eliminar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="isFormOpen" (click)="closeFormModal()">
+  <div class="modal-card form-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? 'Editar Estudiante' : 'Nuevo Estudiante' }}</h2>
+      <button class="btn-close" (click)="closeFormModal()">&times;</button>
+    </div>
+
+    <form [formGroup]="estudianteForm" (ngSubmit)="guardarEstudiante()">
+      <div class="form-group">
+        <label class="form-label">Cédula (10 dígitos)</label>
+        <input type="text" formControlName="cedula" class="form-control" placeholder="1710000000" />
+        <span class="form-error" *ngIf="estudianteForm.get('cedula')?.touched && estudianteForm.get('cedula')?.errors?.['required']">
+          La cédula es requerida.
+        </span>
+        <span class="form-error" *ngIf="estudianteForm.get('cedula')?.touched && estudianteForm.get('cedula')?.errors?.['pattern']">
+          Debe contener exactamente 10 dígitos numéricos.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nombre Completo</label>
+        <input type="text" formControlName="nombre" class="form-control" placeholder="Juan Pérez" />
+        <span class="form-error" *ngIf="estudianteForm.get('nombre')?.touched && estudianteForm.get('nombre')?.invalid">
+          El nombre es requerido (mínimo 3 caracteres).
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Dirección</label>
+        <input type="text" formControlName="direccion" class="form-control" placeholder="Av. Amazonas y Colón" />
+        <span class="form-error" *ngIf="estudianteForm.get('direccion')?.touched && estudianteForm.get('direccion')?.invalid">
+          La dirección es requerida.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input type="text" formControlName="telefono" class="form-control" placeholder="0999999999" />
+        <span class="form-error" *ngIf="estudianteForm.get('telefono')?.touched && estudianteForm.get('telefono')?.invalid">
+          Ingrese un teléfono válido (7 a 10 dígitos).
+        </span>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeFormModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="loading">
+          {{ isEditing ? 'Guardar Cambios' : 'Registrar Estudiante' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<app-confirm-modal
+  [isOpen]="isDeleteModalOpen"
+  title="Eliminar Estudiante"
+  [message]="'¿Estás seguro de eliminar al estudiante ' + (estudianteToDelete?.nombre || '') + '?'"
+  confirmText="Sí, eliminar"
+  (confirm)="ejecutarEliminar()"
+  (cancel)="cancelarEliminar()">
+</app-confirm-modal>

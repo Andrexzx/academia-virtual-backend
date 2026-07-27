@@ -1,0 +1,154 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Gestión de Asignaturas</h1>
+    <p class="page-subtitle">Catálogo de materias y asignaturas académicas</p>
+  </div>
+  <button class="btn btn-primary" (click)="openCreateModal()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    <span>Nueva Asignatura</span>
+  </button>
+</div>
+
+<div *ngIf="successMessage" class="alert-toast alert-toast-success">
+  <span>{{ successMessage }}</span>
+</div>
+
+<div *ngIf="errorMessage" class="alert-toast alert-toast-error">
+  <span>{{ errorMessage }}</span>
+</div>
+
+<div class="glass-card main-card">
+  <div class="toolbar">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="text"
+        placeholder="Buscar por código, nombre o nivel..."
+        [(ngModel)]="searchTerm"
+        (input)="applyFilter()"
+        class="form-control search-input"
+      />
+    </div>
+    <div class="total-badge">
+      Total: {{ filteredAsignaturas.length }} asignatura(s)
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando información del servidor...</p>
+  </div>
+
+  <div *ngIf="!loading && filteredAsignaturas.length === 0" class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+    </svg>
+    <p>No se encontraron asignaturas registradas.</p>
+  </div>
+
+  <div *ngIf="!loading && filteredAsignaturas.length > 0" class="table-container">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nombre de Asignatura</th>
+          <th>Créditos</th>
+          <th>Nivel</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let asig of filteredAsignaturas">
+          <td><span class="badge badge-info">{{ asig.codigo }}</span></td>
+          <td><strong>{{ asig.nombre }}</strong></td>
+          <td>
+            <span class="badge badge-success">{{ asig.creditos }} crédito(s)</span>
+          </td>
+          <td>{{ asig.nivel }}</td>
+          <td style="text-align: right;">
+            <div class="action-buttons">
+              <button class="btn btn-secondary btn-icon" (click)="openEditModal(asig)" title="Editar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="btn btn-danger btn-icon" (click)="confirmarEliminar(asig)" title="Eliminar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="isFormOpen" (click)="closeFormModal()">
+  <div class="modal-card form-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? 'Editar Asignatura' : 'Nueva Asignatura' }}</h2>
+      <button class="btn-close" (click)="closeFormModal()">&times;</button>
+    </div>
+
+    <form [formGroup]="asignaturaForm" (ngSubmit)="guardarAsignatura()">
+      <div class="form-group">
+        <label class="form-label">Código (ej: SIS101)</label>
+        <input type="text" formControlName="codigo" class="form-control" placeholder="SIS101" />
+        <span class="form-error" *ngIf="asignaturaForm.get('codigo')?.touched && asignaturaForm.get('codigo')?.invalid">
+          El código es requerido (3 a 10 caracteres alfanuméricos).
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nombre de la Asignatura</label>
+        <input type="text" formControlName="nombre" class="form-control" placeholder="Programación I" />
+        <span class="form-error" *ngIf="asignaturaForm.get('nombre')?.touched && asignaturaForm.get('nombre')?.invalid">
+          El nombre es requerido.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Número de Créditos</label>
+        <input type="number" formControlName="creditos" class="form-control" min="1" placeholder="4" />
+        <span class="form-error" *ngIf="asignaturaForm.get('creditos')?.touched && asignaturaForm.get('creditos')?.invalid">
+          Ingrese un número válido de créditos (mínimo 1).
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nivel / Semestre</label>
+        <input type="text" formControlName="nivel" class="form-control" placeholder="Primer semestre" />
+        <span class="form-error" *ngIf="asignaturaForm.get('nivel')?.touched && asignaturaForm.get('nivel')?.invalid">
+          El nivel o semestre es requerido.
+        </span>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeFormModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="loading">
+          {{ isEditing ? 'Guardar Cambios' : 'Registrar Asignatura' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<app-confirm-modal
+  [isOpen]="isDeleteModalOpen"
+  title="Eliminar Asignatura"
+  [message]="'¿Estás seguro de eliminar la asignatura ' + (asignaturaToDelete?.codigo || '') + ' - ' + (asignaturaToDelete?.nombre || '') + '?'"
+  confirmText="Sí, eliminar"
+  (confirm)="ejecutarEliminar()"
+  (cancel)="cancelarEliminar()">
+</app-confirm-modal>

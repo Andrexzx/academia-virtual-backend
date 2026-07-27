@@ -1,0 +1,143 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard de Gestión Académica</h1>
+    <p class="page-subtitle">Panel principal de control, métricas en tiempo real y reportes del sistema</p>
+  </div>
+</div>
+
+<div *ngIf="loading" class="loading-state">
+  <div class="spinner"></div>
+  <p>Cargando métricas del sistema...</p>
+</div>
+
+<div *ngIf="!loading" class="dashboard-container">
+  <div class="kpi-grid">
+    <div class="glass-card kpi-card">
+      <div class="kpi-icon icon-students">👨‍🎓</div>
+      <div class="kpi-data">
+        <span class="kpi-num">{{ totalEstudiantes }}</span>
+        <span class="kpi-label">Estudiantes Registrados</span>
+      </div>
+    </div>
+
+    <div class="glass-card kpi-card">
+      <div class="kpi-icon icon-teachers">👨‍🏫</div>
+      <div class="kpi-data">
+        <span class="kpi-num">{{ totalDocentes }}</span>
+        <span class="kpi-label">Docentes Activos</span>
+      </div>
+    </div>
+
+    <div class="glass-card kpi-card">
+      <div class="kpi-icon icon-subjects">📚</div>
+      <div class="kpi-data">
+        <span class="kpi-num">{{ totalAsignaturas }}</span>
+        <span class="kpi-label">Asignaturas en Catálogo</span>
+      </div>
+    </div>
+
+    <div class="glass-card kpi-card">
+      <div class="kpi-icon icon-groups">🏫</div>
+      <div class="kpi-data">
+        <span class="kpi-num">{{ totalGrupos }}</span>
+        <span class="kpi-label">Grupos Ofertados</span>
+      </div>
+    </div>
+
+    <div class="glass-card kpi-card">
+      <div class="kpi-icon icon-matriculas">✅</div>
+      <div class="kpi-data">
+        <span class="kpi-num">{{ totalMatriculas }}</span>
+        <span class="kpi-label">Procesos de Matrícula</span>
+      </div>
+    </div>
+
+    <div class="glass-card kpi-card">
+      <div class="kpi-icon icon-grades">📝</div>
+      <div class="kpi-data">
+        <span class="kpi-num">{{ totalCalificaciones }}</span>
+        <span class="kpi-label">Calificaciones Registradas</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="reports-grid">
+    <div class="glass-card report-card">
+      <div class="card-header-clean">
+        <h3>📊 Distribución de Matrículas por Estado</h3>
+        <span class="badge badge-info">Total: {{ totalMatriculas }}</span>
+      </div>
+
+      <div class="bar-chart-container">
+        <div *ngFor="let stat of statsMatriculas" class="chart-row">
+          <div class="row-header">
+            <span class="status-name">{{ stat.estado }}</span>
+            <span class="status-count">{{ stat.count }} ({{ stat.porcentaje }}%)</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" [style.width.%]="stat.porcentaje" [ngClass]="{
+              'fill-info': stat.estado === 'Preinscrito' || stat.estado === 'Pendiente pago',
+              'fill-success': stat.estado === 'Matriculado' || stat.estado === 'Activo' || stat.estado === 'Finalizado',
+              'fill-danger': stat.estado === 'Cancelado' || stat.estado === 'Anulado'
+            }"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card report-card">
+      <div class="card-header-clean">
+        <h3>📈 Rendimiento Académico General</h3>
+        <span class="badge badge-success">SGR-2.6.1</span>
+      </div>
+
+      <div class="performance-summary">
+        <div class="metric-circle-box">
+          <div class="score-circle">
+            <span class="score-num">{{ promedioGeneral | number:'1.2-2' }}</span>
+            <span class="score-label">Promedio Global</span>
+          </div>
+        </div>
+
+        <div class="performance-details">
+          <div class="detail-item">
+            <span class="detail-title">Tasa de Aprobación:</span>
+            <span class="detail-val text-success">{{ tasaAprobacion }}%</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-title">Estudiantes Aprobados:</span>
+            <span class="detail-val text-success">{{ totalAprobados }} alumno(s)</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-title">Estudiantes Reprobados:</span>
+            <span class="detail-val text-danger">{{ totalReprobados }} alumno(s)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shortcuts-card glass-card">
+    <h3>🚀 Acceso Rápido a Módulos del Sistema</h3>
+    <div class="shortcuts-grid">
+      <a routerLink="/estudiantes" class="shortcut-btn">
+        <span>👨‍🎓 Gestor de Estudiantes</span>
+      </a>
+      <a routerLink="/docentes" class="shortcut-btn">
+        <span>👨‍🏫 Gestor de Docentes</span>
+      </a>
+      <a routerLink="/asignaturas" class="shortcut-btn">
+        <span>📚 Catálogo de Asignaturas</span>
+      </a>
+      <a routerLink="/grupos" class="shortcut-btn">
+        <span>🏫 Oferta de Grupos</span>
+      </a>
+      <a routerLink="/matriculas" class="shortcut-btn">
+        <span>✅ Wizard de Matrícula</span>
+      </a>
+      <a routerLink="/calificaciones" class="shortcut-btn">
+        <span>📝 Registro de Calificaciones</span>
+      </a>
+    </div>
+  </div>
+</div>

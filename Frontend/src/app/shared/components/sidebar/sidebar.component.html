@@ -1,6 +1,21 @@
 <aside class="sidebar">
   <div class="sidebar-section">
-    <div class="section-title">Módulos Activos (Partes 1, 2 & 3)</div>
+    <div class="section-title">Panel General</div>
+    <nav class="nav-list">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="section-title">Gestión Académica</div>
     <nav class="nav-list">
       <a routerLink="/estudiantes" routerLinkActive="active" class="nav-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -55,13 +70,13 @@
         </svg>
         <span>Comprobantes</span>
       </a>
-    </nav>
-  </div>
 
-  <div class="sidebar-section placeholder-section">
-    <div class="section-title">Futuras Etapas</div>
-    <div class="nav-item disabled">
-      <span>Calificaciones & Dashboard (Parte 4)</span>
-    </div>
+      <a routerLink="/calificaciones" routerLinkActive="active" class="nav-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+        <span>Calificaciones</span>
+      </a>
+    </nav>
   </div>
 </aside>

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { CalificacionService } from '../../core/services/calificacion.service';
@@ -21,6 +21,7 @@ export class CalificacionesListComponent implements OnInit {
   private estudianteService = inject(EstudianteService);
   private asignaturaService = inject(AsignaturaService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   calificaciones: Calificacion[] = [];
   filteredCalificaciones: Calificacion[] = [];
@@ -44,6 +45,25 @@ export class CalificacionesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+
+    const cachedCalificaciones = this.calificacionService.getCached();
+    const cachedEstudiantes = this.estudianteService.getCached();
+    const cachedAsignaturas = this.asignaturaService.getCached();
+
+    if (cachedCalificaciones.length > 0) {
+      this.calificaciones = cachedCalificaciones;
+      if (cachedEstudiantes.length > 0) {
+        this.estudiantesList = cachedEstudiantes;
+        cachedEstudiantes.forEach(e => this.estudiantesMap.set(e.id_estudiante, e));
+      }
+      if (cachedAsignaturas.length > 0) {
+        this.asignaturasList = cachedAsignaturas;
+        cachedAsignaturas.forEach(a => this.asignaturasMap.set(a.codigo, a));
+      }
+      this.applyFilter();
+    } else {
+      this.loading = true;
+    }
     this.cargarCatalogos();
   }
 
@@ -58,7 +78,6 @@ export class CalificacionesListComponent implements OnInit {
   }
 
   cargarCatalogos(): void {
-    this.loading = true;
     this.errorMessage = null;
 
     this.estudianteService.listar().subscribe({
@@ -75,10 +94,18 @@ export class CalificacionesListComponent implements OnInit {
 
             this.cargarCalificaciones();
           },
-          error: err => this.handleErr('Error al cargar catálogo de asignaturas', err)
+          error: (err) => {
+            this.errorMessage = err.message || 'Error al cargar asignaturas';
+            this.loading = false;
+            this.cdr.markForCheck();
+          }
         });
       },
-      error: err => this.handleErr('Error al cargar catálogo de estudiantes', err)
+      error: (err) => {
+        this.errorMessage = err.message || 'Error al cargar estudiantes';
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -88,46 +115,48 @@ export class CalificacionesListComponent implements OnInit {
         this.calificaciones = data;
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: err => this.handleErr('Error al cargar calificaciones', err)
+      error: (err) => {
+        this.errorMessage = err.message || 'Error al cargar calificaciones';
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 
   applyFilter(): void {
     if (!this.searchTerm.trim()) {
       this.filteredCalificaciones = [...this.calificaciones];
-      return;
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredCalificaciones = this.calificaciones.filter(c => {
+        const estNombre = this.getEstudianteNombre(c.id_estudiante).toLowerCase();
+        const asigNombre = this.getAsignaturaNombre(c.cod_asignatura).toLowerCase();
+        return (
+          estNombre.includes(term) ||
+          asigNombre.includes(term) ||
+          (c.promedio || 0).toString().includes(term)
+        );
+      });
     }
-    const term = this.searchTerm.toLowerCase();
-    this.filteredCalificaciones = this.calificaciones.filter(c => {
-      const est = this.estudiantesMap.get(c.id_estudiante);
-      const asig = this.asignaturasMap.get(c.cod_asignatura);
-      const estNombre = est ? est.nombre.toLowerCase() : '';
-      const asigNombre = asig ? asig.nombre.toLowerCase() : '';
-
-      return (
-        c.id_calificacion.toString().includes(term) ||
-        estNombre.includes(term) ||
-        asigNombre.includes(term) ||
-        (c.promedio && c.promedio.toString().includes(term))
-      );
-    });
+    this.cdr.markForCheck();
   }
 
   getEstudianteNombre(id: number): string {
     const est = this.estudiantesMap.get(id);
-    return est ? `${est.nombre}` : `Estudiante #${id}`;
+    return est ? est.nombre : `Estudiante #${id}`;
   }
 
   getAsignaturaNombre(codigo: string): string {
     const asig = this.asignaturasMap.get(codigo);
-    return asig ? `${asig.codigo} - ${asig.nombre}` : codigo;
+    return asig ? asig.nombre : codigo;
   }
 
   calcularPromedioEnVivo(): number {
-    const p1 = Number(this.calificacionForm.get('parcial1')?.value || 0);
-    const p2 = Number(this.calificacionForm.get('parcial2')?.value || 0);
-    const ef = Number(this.calificacionForm.get('examen_final')?.value || 0);
+    const p1 = Number(this.calificacionForm.value.parcial1 || 0);
+    const p2 = Number(this.calificacionForm.value.parcial2 || 0);
+    const ef = Number(this.calificacionForm.value.examen_final || 0);
     return Number((p1 * 0.3 + p2 * 0.3 + ef * 0.4).toFixed(2));
   }
 
@@ -135,25 +164,25 @@ export class CalificacionesListComponent implements OnInit {
     this.isEditing = false;
     this.selectedId = null;
     this.calificacionForm.reset({
+      id_estudiante: this.estudiantesList.length > 0 ? this.estudiantesList[0].id_estudiante : '',
+      cod_asignatura: this.asignaturasList.length > 0 ? this.asignaturasList[0].codigo : '',
       parcial1: 8.0,
       parcial2: 8.0,
-      examen_final: 8.0,
-      id_estudiante: this.estudiantesList.length > 0 ? this.estudiantesList[0].id_estudiante : '',
-      cod_asignatura: this.asignaturasList.length > 0 ? this.asignaturasList[0].codigo : ''
+      examen_final: 8.0
     });
     this.isFormOpen = true;
     this.errorMessage = null;
   }
 
-  openEditModal(c: Calificacion): void {
+  openEditModal(cal: Calificacion): void {
     this.isEditing = true;
-    this.selectedId = c.id_calificacion;
+    this.selectedId = cal.id_calificacion;
     this.calificacionForm.patchValue({
-      id_estudiante: c.id_estudiante,
-      cod_asignatura: c.cod_asignatura,
-      parcial1: c.parcial1,
-      parcial2: c.parcial2,
-      examen_final: c.examen_final
+      id_estudiante: cal.id_estudiante,
+      cod_asignatura: cal.cod_asignatura,
+      parcial1: cal.parcial1,
+      parcial2: cal.parcial2,
+      examen_final: cal.examen_final
     });
     this.isFormOpen = true;
     this.errorMessage = null;
@@ -189,7 +218,11 @@ export class CalificacionesListComponent implements OnInit {
           this.closeFormModal();
           this.cargarCalificaciones();
         },
-        error: err => this.handleErr('Error al actualizar calificación', err)
+        error: (err) => {
+          this.errorMessage = err.message || 'Error al actualizar calificación';
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
       });
     } else {
       this.calificacionService.crear(payload as CalificacionCreate).subscribe({
@@ -198,13 +231,17 @@ export class CalificacionesListComponent implements OnInit {
           this.closeFormModal();
           this.cargarCalificaciones();
         },
-        error: err => this.handleErr('Error al registrar calificación', err)
+        error: (err) => {
+          this.errorMessage = err.message || 'Error al registrar calificación';
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
       });
     }
   }
 
-  confirmarEliminar(c: Calificacion): void {
-    this.calificacionToDelete = c;
+  confirmarEliminar(cal: Calificacion): void {
+    this.calificacionToDelete = cal;
     this.isDeleteModalOpen = true;
   }
 
@@ -224,19 +261,20 @@ export class CalificacionesListComponent implements OnInit {
         this.showSuccess('Calificación eliminada exitosamente');
         this.cargarCalificaciones();
       },
-      error: err => this.handleErr('Error al eliminar calificación', err)
+      error: (err) => {
+        this.errorMessage = err.message || 'Error al eliminar calificación';
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
     });
-  }
-
-  private handleErr(context: string, err: any): void {
-    this.errorMessage = `${context}: ${err.message || 'Error en el servidor'}`;
-    this.loading = false;
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
       this.successMessage = null;
+      this.cdr.markForCheck();
     }, 4000);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { GrupoService } from '../../core/services/grupo.service';
@@ -21,6 +21,7 @@ export class GruposListComponent implements OnInit {
   private docenteService = inject(DocenteService);
   private asignaturaService = inject(AsignaturaService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   grupos: Grupo[] = [];
   filteredGrupos: Grupo[] = [];
@@ -45,6 +46,24 @@ export class GruposListComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    const cachedGrupos = this.grupoService.getCached();
+    const cachedDocentes = this.docenteService.getCached();
+    const cachedAsignaturas = this.asignaturaService.getCached();
+
+    if (cachedGrupos.length > 0) {
+      this.grupos = cachedGrupos;
+      if (cachedDocentes.length > 0) {
+        this.docentesList = cachedDocentes;
+        cachedDocentes.forEach(d => this.docentesMap.set(d.id_docente, d));
+      }
+      if (cachedAsignaturas.length > 0) {
+        this.asignaturasList = cachedAsignaturas;
+        cachedAsignaturas.forEach(a => this.asignaturasMap.set(a.codigo, a));
+      }
+      this.applyFilter();
+    } else {
+      this.loading = true;
+    }
     this.cargarDatosGenerales();
   }
 
@@ -59,9 +78,7 @@ export class GruposListComponent implements OnInit {
   }
 
   cargarDatosGenerales(): void {
-    this.loading = true;
     this.errorMessage = null;
-
     this.docenteService.listar().subscribe({
       next: (docentes) => {
         this.docentesList = docentes;
@@ -79,12 +96,14 @@ export class GruposListComponent implements OnInit {
           error: (err) => {
             this.errorMessage = err.message || 'Error al cargar catálogo de asignaturas';
             this.loading = false;
+            this.cdr.markForCheck();
           }
         });
       },
       error: (err) => {
         this.errorMessage = err.message || 'Error al cargar catálogo de docentes';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -95,10 +114,12 @@ export class GruposListComponent implements OnInit {
         this.grupos = data;
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.errorMessage = err.message || 'Error al cargar oferta de grupos';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -106,22 +127,23 @@ export class GruposListComponent implements OnInit {
   applyFilter(): void {
     if (!this.searchTerm.trim()) {
       this.filteredGrupos = [...this.grupos];
-      return;
-    }
-    const term = this.searchTerm.toLowerCase();
-    this.filteredGrupos = this.grupos.filter(g => {
-      const docente = this.docentesMap.get(g.id_docente);
-      const asignatura = this.asignaturasMap.get(g.cod_asignatura);
-      const docenteStr = docente ? `${docente.titulo} ${docente.especialidad}`.toLowerCase() : '';
-      const asigStr = asignatura ? `${asignatura.codigo} ${asignatura.nombre}`.toLowerCase() : '';
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredGrupos = this.grupos.filter(g => {
+        const docente = this.docentesMap.get(g.id_docente);
+        const asignatura = this.asignaturasMap.get(g.cod_asignatura);
+        const docenteStr = docente ? `${docente.titulo} ${docente.especialidad}`.toLowerCase() : '';
+        const asigStr = asignatura ? `${asignatura.codigo} ${asignatura.nombre}`.toLowerCase() : '';
 
-      return (
-        g.modalidad.toLowerCase().includes(term) ||
-        g.horario.toLowerCase().includes(term) ||
-        docenteStr.includes(term) ||
-        asigStr.includes(term)
-      );
-    });
+        return (
+          g.modalidad.toLowerCase().includes(term) ||
+          g.horario.toLowerCase().includes(term) ||
+          docenteStr.includes(term) ||
+          asigStr.includes(term)
+        );
+      });
+    }
+    this.cdr.markForCheck();
   }
 
   getDocenteNombre(id: number): string {
@@ -194,6 +216,7 @@ export class GruposListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al actualizar grupo';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -206,6 +229,7 @@ export class GruposListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al aperturar grupo';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     }
@@ -235,14 +259,17 @@ export class GruposListComponent implements OnInit {
       error: (err) => {
         this.errorMessage = err.message || 'Error al eliminar grupo';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
       this.successMessage = null;
+      this.cdr.markForCheck();
     }, 4000);
   }
 }

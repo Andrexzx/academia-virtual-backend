@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { Estudiante, EstudianteCreate, EstudianteUpdate } from '../models/estudiante.model';
 
@@ -10,8 +10,17 @@ export class EstudianteService {
   private api = inject(ApiService);
   private readonly endpoint = '/estudiantes';
 
+  private estudiantesSubject = new BehaviorSubject<Estudiante[]>([]);
+  estudiantes$ = this.estudiantesSubject.asObservable();
+
   listar(): Observable<Estudiante[]> {
-    return this.api.get<Estudiante>(this.endpoint);
+    return this.api.get<Estudiante>(this.endpoint).pipe(
+      tap(data => this.estudiantesSubject.next(data))
+    );
+  }
+
+  getCached(): Estudiante[] {
+    return this.estudiantesSubject.getValue();
   }
 
   obtenerPorId(id: number): Observable<Estudiante> {
@@ -19,14 +28,20 @@ export class EstudianteService {
   }
 
   crear(estudiante: EstudianteCreate): Observable<Estudiante[]> {
-    return this.api.post<Estudiante>(this.endpoint, estudiante);
+    return this.api.post<Estudiante>(this.endpoint, estudiante).pipe(
+      tap(() => this.listar().subscribe())
+    );
   }
 
   actualizar(id: number, estudiante: EstudianteUpdate): Observable<Estudiante[]> {
-    return this.api.put<Estudiante>(this.endpoint, id, estudiante);
+    return this.api.put<Estudiante>(this.endpoint, id, estudiante).pipe(
+      tap(() => this.listar().subscribe())
+    );
   }
 
   eliminar(id: number): Observable<Estudiante[]> {
-    return this.api.delete<Estudiante>(this.endpoint, id);
+    return this.api.delete<Estudiante>(this.endpoint, id).pipe(
+      tap(() => this.listar().subscribe())
+    );
   }
 }

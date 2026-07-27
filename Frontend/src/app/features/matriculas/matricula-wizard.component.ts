@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { MatriculaService } from '../../core/services/matricula.service';
@@ -26,6 +26,7 @@ export class MatriculaWizardComponent implements OnInit {
   private asignaturaService = inject(AsignaturaService);
   private comprobanteService = inject(ComprobanteService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   matriculas: Matricula[] = [];
   filteredMatriculas: Matricula[] = [];
@@ -63,6 +64,26 @@ export class MatriculaWizardComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForms();
+
+    const cachedMatriculas = this.matriculaService.getCached();
+    const cachedEstudiantes = this.estudianteService.getCached();
+    const cachedGrupos = this.grupoService.getCached();
+
+    if (cachedMatriculas.length > 0) {
+      this.matriculas = cachedMatriculas;
+      this.selectedMatricula = this.matriculas[0];
+      if (cachedEstudiantes.length > 0) {
+        this.estudiantesList = cachedEstudiantes;
+        cachedEstudiantes.forEach(e => this.estudiantesMap.set(e.id_estudiante, e));
+      }
+      if (cachedGrupos.length > 0) {
+        this.gruposList = cachedGrupos;
+        cachedGrupos.forEach(g => this.gruposMap.set(g.id_grupo, g));
+      }
+      this.applyFilter();
+    } else {
+      this.loading = true;
+    }
     this.cargarDatosCatalogos();
   }
 
@@ -81,7 +102,6 @@ export class MatriculaWizardComponent implements OnInit {
   }
 
   cargarDatosCatalogos(): void {
-    this.loading = true;
     this.errorMessage = null;
 
     this.estudianteService.listar().subscribe({
@@ -122,6 +142,7 @@ export class MatriculaWizardComponent implements OnInit {
         }
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: err => this.handleErr('Error al cargar matriculas', err)
     });
@@ -130,24 +151,26 @@ export class MatriculaWizardComponent implements OnInit {
   applyFilter(): void {
     if (!this.searchTerm.trim()) {
       this.filteredMatriculas = [...this.matriculas];
-      return;
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredMatriculas = this.matriculas.filter(m => {
+        const est = this.estudiantesMap.get(m.id_estudiante);
+        const estNombre = est ? est.nombre.toLowerCase() : '';
+        const estCedula = est ? est.cedula : '';
+        return (
+          m.id_matricula.toString().includes(term) ||
+          m.estado.toLowerCase().includes(term) ||
+          estNombre.includes(term) ||
+          estCedula.includes(term)
+        );
+      });
     }
-    const term = this.searchTerm.toLowerCase();
-    this.filteredMatriculas = this.matriculas.filter(m => {
-      const est = this.estudiantesMap.get(m.id_estudiante);
-      const estNombre = est ? est.nombre.toLowerCase() : '';
-      const estCedula = est ? est.cedula : '';
-      return (
-        m.id_matricula.toString().includes(term) ||
-        m.estado.toLowerCase().includes(term) ||
-        estNombre.includes(term) ||
-        estCedula.includes(term)
-      );
-    });
+    this.cdr.markForCheck();
   }
 
   selectMatricula(m: Matricula): void {
     this.selectedMatricula = m;
+    this.cdr.markForCheck();
   }
 
   getEstudianteNombre(id: number): string {
@@ -322,12 +345,15 @@ export class MatriculaWizardComponent implements OnInit {
   private handleErr(context: string, err: any): void {
     this.errorMessage = `${context}: ${err.message || 'Error en el servidor'}`;
     this.loading = false;
+    this.cdr.markForCheck();
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
       this.successMessage = null;
+      this.cdr.markForCheck();
     }, 4000);
   }
 }

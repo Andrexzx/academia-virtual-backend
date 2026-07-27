@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { DocenteService } from '../../core/services/docente.service';
@@ -15,6 +15,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 export class DocentesListComponent implements OnInit {
   private docenteService = inject(DocenteService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   docentes: Docente[] = [];
   filteredDocentes: Docente[] = [];
@@ -34,6 +35,13 @@ export class DocentesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    const cached = this.docenteService.getCached();
+    if (cached.length > 0) {
+      this.docentes = cached;
+      this.applyFilter();
+    } else {
+      this.loading = true;
+    }
     this.cargarDocentes();
   }
 
@@ -46,17 +54,18 @@ export class DocentesListComponent implements OnInit {
   }
 
   cargarDocentes(): void {
-    this.loading = true;
     this.errorMessage = null;
     this.docenteService.listar().subscribe({
       next: (data) => {
         this.docentes = data;
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.errorMessage = err.message || 'Error al cargar docentes';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -64,14 +73,15 @@ export class DocentesListComponent implements OnInit {
   applyFilter(): void {
     if (!this.searchTerm.trim()) {
       this.filteredDocentes = [...this.docentes];
-      return;
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredDocentes = this.docentes.filter(d =>
+        d.titulo.toLowerCase().includes(term) ||
+        d.especialidad.toLowerCase().includes(term) ||
+        d.experiencia.toString().includes(term)
+      );
     }
-    const term = this.searchTerm.toLowerCase();
-    this.filteredDocentes = this.docentes.filter(d =>
-      d.titulo.toLowerCase().includes(term) ||
-      d.especialidad.toLowerCase().includes(term) ||
-      d.experiencia.toString().includes(term)
-    );
+    this.cdr.markForCheck();
   }
 
   openCreateModal(): void {
@@ -119,6 +129,7 @@ export class DocentesListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al actualizar docente';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -131,6 +142,7 @@ export class DocentesListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al registrar docente';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     }
@@ -160,14 +172,17 @@ export class DocentesListComponent implements OnInit {
       error: (err) => {
         this.errorMessage = err.message || 'Error al eliminar docente';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
       this.successMessage = null;
+      this.cdr.markForCheck();
     }, 4000);
   }
 }

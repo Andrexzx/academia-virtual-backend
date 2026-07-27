@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { EstudianteService } from '../../core/services/estudiante.service';
@@ -15,6 +15,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 export class EstudiantesListComponent implements OnInit {
   private estudianteService = inject(EstudianteService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   estudiantes: Estudiante[] = [];
   filteredEstudiantes: Estudiante[] = [];
@@ -34,6 +35,13 @@ export class EstudiantesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    const cached = this.estudianteService.getCached();
+    if (cached.length > 0) {
+      this.estudiantes = cached;
+      this.applyFilter();
+    } else {
+      this.loading = true;
+    }
     this.cargarEstudiantes();
   }
 
@@ -47,17 +55,18 @@ export class EstudiantesListComponent implements OnInit {
   }
 
   cargarEstudiantes(): void {
-    this.loading = true;
     this.errorMessage = null;
     this.estudianteService.listar().subscribe({
       next: (data) => {
         this.estudiantes = data;
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.errorMessage = err.message || 'Error al cargar estudiantes';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -65,14 +74,15 @@ export class EstudiantesListComponent implements OnInit {
   applyFilter(): void {
     if (!this.searchTerm.trim()) {
       this.filteredEstudiantes = [...this.estudiantes];
-      return;
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredEstudiantes = this.estudiantes.filter(e =>
+        e.nombre.toLowerCase().includes(term) ||
+        e.cedula.includes(term) ||
+        e.direccion.toLowerCase().includes(term)
+      );
     }
-    const term = this.searchTerm.toLowerCase();
-    this.filteredEstudiantes = this.estudiantes.filter(e =>
-      e.nombre.toLowerCase().includes(term) ||
-      e.cedula.includes(term) ||
-      e.direccion.toLowerCase().includes(term)
-    );
+    this.cdr.markForCheck();
   }
 
   openCreateModal(): void {
@@ -121,6 +131,7 @@ export class EstudiantesListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al actualizar estudiante';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -133,6 +144,7 @@ export class EstudiantesListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al registrar estudiante';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     }
@@ -162,14 +174,17 @@ export class EstudiantesListComponent implements OnInit {
       error: (err) => {
         this.errorMessage = err.message || 'Error al eliminar estudiante';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
       this.successMessage = null;
+      this.cdr.markForCheck();
     }, 4000);
   }
 }

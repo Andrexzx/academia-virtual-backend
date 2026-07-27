@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { EstudianteService } from '../../core/services/estudiante.service';
@@ -29,6 +29,7 @@ export class DashboardComponent implements OnInit {
   private grupoService = inject(GrupoService);
   private matriculaService = inject(MatriculaService);
   private calificacionService = inject(CalificacionService);
+  private cdr = inject(ChangeDetectorRef);
 
   totalEstudiantes = 0;
   totalDocentes = 0;
@@ -43,15 +44,32 @@ export class DashboardComponent implements OnInit {
   totalReprobados = 0;
 
   statsMatriculas: EstadoStat[] = [];
-  loading = true;
+  loading = false;
 
   ngOnInit(): void {
+    const cachedEst = this.estudianteService.getCached();
+    const cachedDoc = this.docenteService.getCached();
+    const cachedAsig = this.asignaturaService.getCached();
+    const cachedGrup = this.grupoService.getCached();
+    const cachedMat = this.matriculaService.getCached();
+    const cachedCal = this.calificacionService.getCached();
+
+    if (cachedEst.length > 0) {
+      this.totalEstudiantes = cachedEst.length;
+      this.totalDocentes = cachedDoc.length;
+      this.totalAsignaturas = cachedAsig.length;
+      this.totalGrupos = cachedGrup.length;
+      this.totalMatriculas = cachedMat.length;
+      this.totalCalificaciones = cachedCal.length;
+      this.procesarStatsMatriculas(cachedMat);
+      this.procesarStatsCalificaciones(cachedCal);
+    } else {
+      this.loading = true;
+    }
     this.cargarDashboard();
   }
 
   cargarDashboard(): void {
-    this.loading = true;
-
     this.estudianteService.listar().subscribe({
       next: (est) => {
         this.totalEstudiantes = est.length;
@@ -78,23 +96,24 @@ export class DashboardComponent implements OnInit {
                             this.totalCalificaciones = cal.length;
                             this.procesarStatsCalificaciones(cal);
                             this.loading = false;
+                            this.cdr.markForCheck();
                           },
-                          error: () => this.loading = false
+                          error: () => { this.loading = false; this.cdr.markForCheck(); }
                         });
                       },
-                      error: () => this.loading = false
+                      error: () => { this.loading = false; this.cdr.markForCheck(); }
                     });
                   },
-                  error: () => this.loading = false
+                  error: () => { this.loading = false; this.cdr.markForCheck(); }
                 });
               },
-              error: () => this.loading = false
+              error: () => { this.loading = false; this.cdr.markForCheck(); }
             });
           },
-          error: () => this.loading = false
+          error: () => { this.loading = false; this.cdr.markForCheck(); }
         });
       },
-      error: () => this.loading = false
+      error: () => { this.loading = false; this.cdr.markForCheck(); }
     });
   }
 

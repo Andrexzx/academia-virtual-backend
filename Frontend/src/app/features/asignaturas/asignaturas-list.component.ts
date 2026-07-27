@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { AsignaturaService } from '../../core/services/asignatura.service';
@@ -15,6 +15,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 export class AsignaturasListComponent implements OnInit {
   private asignaturaService = inject(AsignaturaService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   asignaturas: Asignatura[] = [];
   filteredAsignaturas: Asignatura[] = [];
@@ -34,6 +35,13 @@ export class AsignaturasListComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    const cached = this.asignaturaService.getCached();
+    if (cached.length > 0) {
+      this.asignaturas = cached;
+      this.applyFilter();
+    } else {
+      this.loading = true;
+    }
     this.cargarAsignaturas();
   }
 
@@ -47,17 +55,18 @@ export class AsignaturasListComponent implements OnInit {
   }
 
   cargarAsignaturas(): void {
-    this.loading = true;
     this.errorMessage = null;
     this.asignaturaService.listar().subscribe({
       next: (data) => {
         this.asignaturas = data;
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.errorMessage = err.message || 'Error al cargar asignaturas';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -65,14 +74,15 @@ export class AsignaturasListComponent implements OnInit {
   applyFilter(): void {
     if (!this.searchTerm.trim()) {
       this.filteredAsignaturas = [...this.asignaturas];
-      return;
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredAsignaturas = this.asignaturas.filter(a =>
+        a.codigo.toLowerCase().includes(term) ||
+        a.nombre.toLowerCase().includes(term) ||
+        a.nivel.toLowerCase().includes(term)
+      );
     }
-    const term = this.searchTerm.toLowerCase();
-    this.filteredAsignaturas = this.asignaturas.filter(a =>
-      a.codigo.toLowerCase().includes(term) ||
-      a.nombre.toLowerCase().includes(term) ||
-      a.nivel.toLowerCase().includes(term)
-    );
+    this.cdr.markForCheck();
   }
 
   openCreateModal(): void {
@@ -128,6 +138,7 @@ export class AsignaturasListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al actualizar asignatura';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -146,6 +157,7 @@ export class AsignaturasListComponent implements OnInit {
         error: (err) => {
           this.errorMessage = err.message || 'Error al registrar asignatura';
           this.loading = false;
+          this.cdr.markForCheck();
         }
       });
     }
@@ -175,14 +187,17 @@ export class AsignaturasListComponent implements OnInit {
       error: (err) => {
         this.errorMessage = err.message || 'Error al eliminar asignatura';
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
+    this.cdr.markForCheck();
     setTimeout(() => {
       this.successMessage = null;
+      this.cdr.markForCheck();
     }, 4000);
   }
 }
